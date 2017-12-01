@@ -45,7 +45,7 @@ def py_cpu_nms(dets, thresh, to_eliptic_format=True):
             angle = 180
             center_x = (box[2] + box[0]) / 2
             center_y = (box[3] + box[1]) * 1.2 / 2
-            results.append([major_axis_radius, minor_axis_radius, angle, center_x, center_y])
+            results.append([major_axis_radius, minor_axis_radius, angle, center_x, center_y, scores[i]])
     else:
         results = [dets[i].tolist() for i in keep]
 

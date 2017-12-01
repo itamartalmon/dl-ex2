@@ -68,7 +68,7 @@ class SimpleDetector():
     '''
     Simple detector with 12FCN net
     '''
-    def __init__(self, net, scale_list=[1., 0.75, 0.5, 0.25], nms_threshold=0.1):
+    def __init__(self, net, scale_list=[0.5, 0.2, 0.1, 0.07, 0.05], nms_threshold=0.5):
         self.net = net
         self.scale_list = scale_list
         self.nms_threshold = nms_threshold
@@ -79,23 +79,26 @@ class SimpleDetector():
         :param img: the image as torch tensor 3 x H x W
         :return: list of bounding boxes of the detected faces
         '''
+        #check if gray
+        if len(np.shape(img)) != 3:
+            img = np.reshape(img, (np.shape(img)[0], np.shape(img)[1], 1))
+            img = np.concatenate((img, img, img), axis=2)
         # print(img.shape)
         result_boxes = []
         for scale in self.scale_list:
             resized_image = rescale(img, scale, mode='constant', preserve_range=True)
             resized_image = np.rollaxis(resized_image, 2).copy()
             resized_image = torch.autograd.Variable(torch.from_numpy(resized_image).view(-1, *resized_image.shape)).float()
-            # print(resized_image.size())
             output = self.net(resized_image)
             # output size is 1 X 2 X H X W
             heatmap = output[:, 1, :, :] # take the probability of detecting Face class ( 1 X H X W )
             heatmap = heatmap.view(heatmap.size()[-2], heatmap.size()[-1]) # resize to matrix form ( H X W )
-            preds = heatmap > 0.5 # 1 is we predict a face, 0 o/w
+            preds = heatmap > 0.1 # 1 is we predict a face, 0 o/w
             H, W = preds.size()
             bboxes = []
             for h in range(H):
                 for w in range(W):
-                    if preds.data[h, w] != 2:
+                    if preds.data[h, w] == 1:
                         score = heatmap.data[h, w]
                         # print(score)
                         xmin = int(w*(1/scale))

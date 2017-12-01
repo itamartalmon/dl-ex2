@@ -10,6 +10,7 @@ import os, random
 PATH_TO_DATA_FOLDER = "C:\\Users\\Itamar Talmon\\Dropbox\\Masters\\SecondYear\\Deep Learning\\EX2\\EX2_data\\"
 PATH_TO_AFLW = PATH_TO_DATA_FOLDER + "aflw\\"
 PATH_TO_FDDB = PATH_TO_DATA_FOLDER + "fddb\\"
+PATH_TO_FDDB_IMAGES = os.sep.join([PATH_TO_FDDB, 'images'])
 AFLW_12 = PATH_TO_AFLW + "aflw_12.t7"
 AFLW_24 = PATH_TO_AFLW + "aflw_24.t7"
 PATH_TO_PASCAL_FOLDER = "C:\\Users\\Itamar Talmon\\Downloads\\VOCtrainval_06-Nov-2007\\VOCdevkit\VOC2007\\"
@@ -110,4 +111,14 @@ def show_patch(p):
     i = np.rollaxis(i, 2)
     plt.imshow(i.astype(np.uint8))
     plt.pause(10)
+
+
+def get_fddb_image_paths(path_to_fddb_images):
+    path_list = []
+    for year in os.listdir(path_to_fddb_images):
+        for month in os.listdir(os.sep.join([path_to_fddb_images, year])):
+            for day in os.listdir(os.sep.join([path_to_fddb_images, year, month])):
+                images = os.listdir(os.sep.join([path_to_fddb_images, year, month, day, 'big']))
+                path_list += [os.sep.join([path_to_fddb_images, year, month, day, 'big', i]) for i in images]
+    return path_list
 

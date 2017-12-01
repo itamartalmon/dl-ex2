@@ -8,7 +8,7 @@ from torch.autograd import Variable
 import torch.optim as optim
 from torch.utils.data import DataLoader
 
-from input_handler import AFLW, get_train_and_test_sets
+from input_handler import AFLW, get_train_and_test_sets, get_fddb_image_paths, PATH_TO_FDDB_IMAGES
 from models import Det12, FCN12, SimpleDetector
 from skimage import io
 
@@ -128,13 +128,22 @@ def Q2():
         best_model, losses = train_model(model, criterion, optimizer, dset_loaders, dset_sizes, num_epochs=num_of_epochs)
         torch.save(best_model, "FCN12.t7")
 
-    # run detector
+    # run detector and output results
     d = SimpleDetector(best_model)
-    d.detect(io.imread("C:\\Users\\Itamar Talmon\\Downloads\\VOCtrainval_06-Nov-2007\\VOCdevkit\\VOC2007\\JPEGImages\\000021.jpg"))
+    img_list = get_fddb_image_paths(PATH_TO_FDDB_IMAGES)
+    with open("results.txt", 'w') as f:
+        for img in img_list:
+            print(img[len(PATH_TO_FDDB_IMAGES):])
+            res = d.detect(io.imread(img))
+            f.write(img[len(PATH_TO_FDDB_IMAGES):] + '\n')
+            f.write(str(len(res)) + '\n')
+            for r in res:
+                s = ' '.join([str(x) for x in r])
+                f.write(s + '\n')
+
 
 
 
 # Q1()
 
 Q2()
-
