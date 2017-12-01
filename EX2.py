@@ -47,11 +47,6 @@ def train_model(model, criterion, optimizer, dset_loaders, dset_sizes, num_epoch
                 # forward
                 outputs = model(inputs)
                 _, preds = torch.max(outputs, dim=1)
-                '''print(outputs.size())
-                print(outputs.data[0, :, 0, 0])
-                print(preds)
-                print(preds.data.long().flatten() == labels.data)
-                exit(0)'''
                 loss = criterion(outputs.view(-1, 2).float(), labels.long())
 
                 # backward + optimize only if in training phase
@@ -113,7 +108,6 @@ def Q2():
     train FCN-12-Net, Test detection
     '''
     if os.path.isfile("FCN12.t7"):
-        best_model = FCN12()
         best_model = torch.load("FCN12.t7")
     else:
         model = FCN12()
@@ -136,7 +130,7 @@ def Q2():
 
     # run detector
     d = SimpleDetector(best_model)
-    d.detect(io.imread("C:\\Users\\Itamar Talmon\\Downloads\\VOCtrainval_06-Nov-2007\\VOCdevkit\\VOC2007\\JPEGImages\\000016.jpg"))
+    d.detect(io.imread("C:\\Users\\Itamar Talmon\\Downloads\\VOCtrainval_06-Nov-2007\\VOCdevkit\\VOC2007\\JPEGImages\\000021.jpg"))
 
 
 
