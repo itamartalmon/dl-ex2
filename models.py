@@ -88,12 +88,13 @@ class SimpleDetector():
         for scale in self.scale_list:
             resized_image = rescale(img, scale, mode='constant', preserve_range=True)
             resized_image = np.rollaxis(resized_image, 2).copy()
+            resized_image = np.uint8(resized_image / 255)
             resized_image = torch.autograd.Variable(torch.from_numpy(resized_image).view(-1, *resized_image.shape)).float()
             output = self.net(resized_image)
             # output size is 1 X 2 X H X W
             heatmap = output[:, 1, :, :] # take the probability of detecting Face class ( 1 X H X W )
             heatmap = heatmap.view(heatmap.size()[-2], heatmap.size()[-1]) # resize to matrix form ( H X W )
-            preds = heatmap > 0.1 # 1 is we predict a face, 0 o/w
+            preds = heatmap > 0.5 # 1 is we predict a face, 0 o/w
             H, W = preds.size()
             bboxes = []
             for h in range(H):

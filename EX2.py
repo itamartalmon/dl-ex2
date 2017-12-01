@@ -1,6 +1,7 @@
 import time
 import copy
 import os
+import sys
 # import torchfile
 import torch
 import torch.nn as nn
@@ -131,9 +132,11 @@ def Q2():
     # run detector and output results
     d = SimpleDetector(best_model)
     img_list = get_fddb_image_paths(PATH_TO_FDDB_IMAGES)
+    n = len(img_list)
     with open("results.txt", 'w') as f:
-        for img in img_list:
-            print(img[len(PATH_TO_FDDB_IMAGES):])
+        for idx, img in enumerate(img_list):
+            sys.stdout.write("\rProcesing image number {0}/{1} : {2}".format(idx, n, img[len(PATH_TO_FDDB_IMAGES):]))
+            sys.stdout.flush()
             res = d.detect(io.imread(img))
             f.write(img[len(PATH_TO_FDDB_IMAGES):] + '\n')
             f.write(str(len(res)) + '\n')
@@ -147,3 +150,4 @@ def Q2():
 # Q1()
 
 Q2()
+
