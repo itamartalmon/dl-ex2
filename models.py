@@ -1,7 +1,6 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from scipy.misc import imresize
 from skimage.transform import rescale
 import numpy as np
 from nms import py_cpu_nms
@@ -30,7 +29,7 @@ class Det12(nn.Module):
         x = x.view(-1, 16 * 4 * 4)
         # this will be used in the Det24 Net
         from_det12 = self.fc(x)
-        x = F.sigmoid(from_det12)
+        x = F.softmax(from_det12)
         return x
 
 
@@ -59,7 +58,7 @@ class FCN12(nn.Module):
         # this will be used in the Det24 Net
         x = self.conv2(x)
         #print(x.size())
-        x = F.sigmoid(x)
+        x = F.softmax(x)
         #print(x.size())
         return x
 
@@ -79,7 +78,7 @@ class SimpleDetector():
         :param img: the image as torch tensor 3 x H x W
         :return: list of bounding boxes of the detected faces
         '''
-        #check if gray
+        # check if gray-scale
         if len(np.shape(img)) != 3:
             img = np.reshape(img, (np.shape(img)[0], np.shape(img)[1], 1))
             img = np.concatenate((img, img, img), axis=2)
