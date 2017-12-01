@@ -68,7 +68,7 @@ class SimpleDetector():
     '''
     Simple detector with 12FCN net
     '''
-    def __init__(self, net, scale_list=[0.5, 0.2, 0.1, 0.07, 0.05], nms_threshold=0.5):
+    def __init__(self, net, scale_list=[0.5, 0.2, 0.1, 0.07, 0.05], nms_threshold=0.7):
         self.net = net
         self.scale_list = scale_list
         self.nms_threshold = nms_threshold

@@ -133,9 +133,9 @@ def Q2():
     d = SimpleDetector(best_model)
     img_list = get_fddb_image_paths(PATH_TO_FDDB_IMAGES)
     n = len(img_list)
-    with open("results.txt", 'w') as f:
+    with open("fold-01-out.txt", 'w') as f:
         for idx, img in enumerate(img_list):
-            sys.stdout.write("\rProcesing image number {0}/{1} : {2}".format(idx, n, img[len(PATH_TO_FDDB_IMAGES):]))
+            sys.stdout.write("\rProcesing image number {0}/{1} : {2}".format(idx+1, n, img[len(PATH_TO_FDDB_IMAGES):]))
             sys.stdout.flush()
             res = d.detect(io.imread(img))
             f.write(img[len(PATH_TO_FDDB_IMAGES):] + '\n')
