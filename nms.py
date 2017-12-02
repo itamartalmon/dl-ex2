@@ -36,17 +36,16 @@ def py_cpu_nms(dets, thresh, to_eliptic_format=True):
         inds = np.where(ovr <= thresh)[0]
         order = order[inds + 1]
 
-    if to_eliptic_format:
-        results = []
-        for i in keep:
-            box = dets[i]
-            major_axis_radius = box[2] - box[0]
-            minor_axis_radius = (box[3] - box[1]) * 0.8
-            angle = 0
-            center_x = (box[2] + box[0]) / 2
-            center_y = (box[3] + box[1]) * 1.2 / 2
-            results.append([major_axis_radius, minor_axis_radius, angle, center_x, center_y, scores[i]])
-    else:
-        results = [dets[i].tolist() for i in keep]
+    # format to DDDB Rectangular format
+    results = []
+    for i in keep:
+        box = dets[i]
+        # left_x top_y width height detection_score
+        left_x = box[0]
+        top_y = box[3]
+        width = box[2] - box[0]
+        height = box[3] - box[1]
+        detection_score = box[4]
+        results.append([left_x, top_y, width, height, detection_score])
 
     return results

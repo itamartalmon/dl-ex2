@@ -11,6 +11,7 @@ PATH_TO_DATA_FOLDER = "C:\\Users\\Itamar Talmon\\Dropbox\\Masters\\SecondYear\\D
 PATH_TO_AFLW = PATH_TO_DATA_FOLDER + "aflw\\"
 PATH_TO_FDDB = PATH_TO_DATA_FOLDER + "fddb\\"
 PATH_TO_FDDB_IMAGES = os.sep.join([PATH_TO_FDDB, 'images'])
+PATH_TO_FDDB_IMAGE_PATHES_FILE = os.sep.join([PATH_TO_FDDB, 'FDDB-folds', 'FDDB-fold-01.txt'])
 AFLW_12 = PATH_TO_AFLW + "aflw_12.t7"
 AFLW_24 = PATH_TO_AFLW + "aflw_24.t7"
 PATH_TO_PASCAL_FOLDER = "C:\\Users\\Itamar Talmon\\Downloads\\VOCtrainval_06-Nov-2007\\VOCdevkit\VOC2007\\"
@@ -53,7 +54,8 @@ def get_negative_samples(num_of_samples, crop_size):
     i = 0
     while i < num_of_samples:
         image_file = random.choice(non_person_images)
-        f = io.imread(PATH_TO_PASCAL_IMGS + image_file)
+        # read and normalize a random image
+        f = io.imread(PATH_TO_PASCAL_IMGS + image_file) / 255
         fh, fw, _ = f.shape
         for _ in range(int(num_of_samples/len(non_person_images))):
             rx = random.randint(0, fw - crop_size)
@@ -69,7 +71,7 @@ def get_negative_samples(num_of_samples, crop_size):
     return inputs
 
 
-def get_train_and_test_sets(net_size, train_frac=0.8):
+def get_positive_train_and_test_sets(net_size, train_frac=0.8):
     """This functions reads the csv file and return randomly chosen test and train sets"""
     path = AFLW_12 if net_size == 12 else AFLW_24
     img_data = load_t7_imgs(path).numpy()
@@ -113,12 +115,8 @@ def show_patch(p):
     plt.pause(10)
 
 
-def get_fddb_image_paths(path_to_fddb_images):
-    path_list = []
-    for year in os.listdir(path_to_fddb_images):
-        for month in os.listdir(os.sep.join([path_to_fddb_images, year])):
-            for day in os.listdir(os.sep.join([path_to_fddb_images, year, month])):
-                images = os.listdir(os.sep.join([path_to_fddb_images, year, month, day, 'big']))
-                path_list += [os.sep.join([path_to_fddb_images, year, month, day, 'big', i]) for i in images]
+def get_fddb_image_paths():
+    with open(PATH_TO_FDDB_IMAGE_PATHES_FILE) as rf:
+        path_list = rf.read().strip().split('\n')
     return path_list
 

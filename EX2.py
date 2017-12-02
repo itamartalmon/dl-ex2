@@ -8,8 +8,8 @@ import torch.nn as nn
 from torch.autograd import Variable
 import torch.optim as optim
 from torch.utils.data import DataLoader
-
-from input_handler import AFLW, get_train_and_test_sets, get_fddb_image_paths, PATH_TO_FDDB_IMAGES
+from plot_utils import plot_learning_curves
+from input_handler import AFLW, get_positive_train_and_test_sets, get_fddb_image_paths, PATH_TO_FDDB_IMAGES
 from models import Det12, FCN12, SimpleDetector
 from skimage import io
 
@@ -26,7 +26,7 @@ def train_model(model, criterion, optimizer, dset_loaders, dset_sizes, num_epoch
         print('-' * 10)
 
         # Each epoch has a training and validation phase
-        for phase in ['train', 'val']:
+        for phase in ['val', 'train']:
             if phase == 'train':
                 model.train(True)  # Set model to training mode
             else:
@@ -93,7 +93,7 @@ def Q1():
     optimizer = optim.Adam(model.parameters(), lr=0.001)
     pre_load = time.time()
     print('Getting AFLW data...')
-    dataset, testDataset = get_train_and_test_sets(net_size, 0.8)
+    dataset, testDataset = get_positive_train_and_test_sets(net_size, 0.8)
     print('Creating the Data Loaders...')
     trainloader = DataLoader(AFLW(net_size, dataset), batch_size, shuffle=True)
     testloader = DataLoader(AFLW(net_size, testDataset), batch_size, shuffle=True)
@@ -102,11 +102,12 @@ def Q1():
     print('Loading time : {}'.format(time.time() - pre_load))
     best_model, losses = train_model(model, criterion, optimizer, dset_loaders, dset_sizes, num_epochs=num_of_epochs)
     torch.save(best_model, "Det12.t7")
+    plot_learning_curves(losses['train'], losses['val'], 'Detection12Net')
 
 
 def Q2():
     '''
-    train FCN-12-Net, Test detection
+    train FCN-12-Net, save results, test detection and output to file
     '''
     if os.path.isfile("FCN12.t7"):
         best_model = torch.load("FCN12.t7")
@@ -119,7 +120,7 @@ def Q2():
         optimizer = optim.Adam(model.parameters(), lr=0.001)
         pre_load = time.time()
         print('Getting AFLW data...')
-        dataset, testDataset = get_train_and_test_sets(net_size, 0.8)
+        dataset, testDataset = get_positive_train_and_test_sets(net_size, 0.8)
         print('Creating the Data Loaders...')
         trainloader = DataLoader(AFLW(net_size, dataset), batch_size, shuffle=True)
         testloader = DataLoader(AFLW(net_size, testDataset), batch_size, shuffle=True)
@@ -128,17 +129,22 @@ def Q2():
         print('Loading time : {}'.format(time.time() - pre_load))
         best_model, losses = train_model(model, criterion, optimizer, dset_loaders, dset_sizes, num_epochs=num_of_epochs)
         torch.save(best_model, "FCN12.t7")
+        plot_learning_curves(losses['train'], losses['val'], 'FCN12Net')
 
     # run detector and output results
     d = SimpleDetector(best_model)
-    img_list = get_fddb_image_paths(PATH_TO_FDDB_IMAGES)
+    img_list = get_fddb_image_paths()
     n = len(img_list)
-    with open("fold-01-out.txt", 'w') as f:
+    with open("fold-01-out.txt", 'w', newline='\n') as f:
         for idx, img in enumerate(img_list):
-            sys.stdout.write("\rProcesing image number {0}/{1} : {2}".format(idx+1, n, img[len(PATH_TO_FDDB_IMAGES):]))
+            sys.stdout.write("\rProcesing image number {0}/{1} : {2}".format(idx+1, n, img))
             sys.stdout.flush()
-            res = d.detect(io.imread(img))
-            f.write(img[len(PATH_TO_FDDB_IMAGES):] + '\n')
+            if os.name == 'nt':  # change path if we run from windows
+                path = os.sep.join([PATH_TO_FDDB_IMAGES, img.replace('/', '\\') + '.jpg'])
+            else:
+                path = os.sep.join([PATH_TO_FDDB_IMAGES, img + '.jpg'])
+            res = d.detect(io.imread(path))
+            f.write(img + '\n')
             f.write(str(len(res)) + '\n')
             for r in res:
                 s = ' '.join([str(x) for x in r])
