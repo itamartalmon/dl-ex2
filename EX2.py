@@ -87,20 +87,21 @@ def Q1():
     '''
     model = Det12()
     net_size = 12
-    num_of_epochs = 20
     batch_size = 64
+    num_of_epochs = 50
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.parameters(), lr=0.001)
+    optimizer = optim.Adam(model.parameters(), lr=5e-3)
     pre_load = time.time()
     print('Getting AFLW data...')
-    dataset, testDataset = get_positive_train_and_test_sets(net_size, 0.8)
+    train_frac = 0.8
+    dataset, testDataset = get_positive_train_and_test_sets(net_size, train_frac=0.8)
     print('Creating the Data Loaders...')
-    trainloader = DataLoader(AFLW(net_size, dataset), batch_size, shuffle=True)
-    testloader = DataLoader(AFLW(net_size, testDataset), batch_size, shuffle=True)
+    trainloader = DataLoader(AFLW(net_size, dataset, num_of_neg_samples=len(dataset)), batch_size, shuffle=True)
+    testloader = DataLoader(AFLW(net_size, testDataset, num_of_neg_samples=len(testDataset)), batch_size, shuffle=True)
     dset_loaders = {'train': trainloader, 'val': testloader}
     dset_sizes = {'train': len(trainloader.dataset), 'val': len(testloader.dataset)}
     print('Loading time : {}'.format(time.time() - pre_load))
-    best_model, losses = train_model(model, criterion, optimizer, dset_loaders, dset_sizes, num_epochs=num_of_epochs)
+    best_model, losses = train_model(model, criterion, optimizer, dset_loaders, dset_sizes, num_of_epochs)
     torch.save(best_model, "Det12.t7")
     plot_learning_curves(losses['train'], losses['val'], 'Detection12Net')
 
@@ -114,16 +115,16 @@ def Q2():
     else:
         model = FCN12()
         net_size = 12
-        num_of_epochs = 20
+        num_of_epochs = 50
         batch_size = 64
         criterion = nn.CrossEntropyLoss()
-        optimizer = optim.Adam(model.parameters(), lr=0.001)
+        optimizer = optim.Adam(model.parameters(), lr=5e-3)
         pre_load = time.time()
         print('Getting AFLW data...')
         dataset, testDataset = get_positive_train_and_test_sets(net_size, 0.8)
         print('Creating the Data Loaders...')
-        trainloader = DataLoader(AFLW(net_size, dataset), batch_size, shuffle=True)
-        testloader = DataLoader(AFLW(net_size, testDataset), batch_size, shuffle=True)
+        trainloader = DataLoader(AFLW(net_size, dataset, num_of_neg_samples=len(dataset)), batch_size, shuffle=True)
+        testloader = DataLoader(AFLW(net_size, testDataset, num_of_neg_samples=len(dataset)), batch_size, shuffle=True)
         dset_loaders = {'train': trainloader, 'val': testloader}
         dset_sizes = {'train': len(trainloader.dataset), 'val': len(testloader.dataset)}
         print('Loading time : {}'.format(time.time() - pre_load))
@@ -153,7 +154,7 @@ def Q2():
 
 
 
-# Q1()
+Q1()
 
 Q2()
 

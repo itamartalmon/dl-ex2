@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import torch
 from torch.utils.data import Dataset
 from torch.utils.serialization import load_lua
+from torchvision.transforms import RandomSizedCrop, ToPILImage, ToTensor
 import os, random
 
 PATH_TO_DATA_FOLDER = "C:\\Users\\Itamar Talmon\\Dropbox\\Masters\\SecondYear\\Deep Learning\\EX2\\EX2_data\\"
@@ -52,18 +53,22 @@ def get_negative_samples(num_of_samples, crop_size):
     # remove all person-labeled images
     non_person_images = [img for img in img_file_list if not person_labels[img]]
     i = 0
+    crop = RandomSizedCrop(crop_size)
+    to_pil = ToPILImage()
+    to_tensor = ToTensor()
     while i < num_of_samples:
         image_file = random.choice(non_person_images)
         # read and normalize a random image
-        f = io.imread(PATH_TO_PASCAL_IMGS + image_file) / 255
+        f = io.imread(PATH_TO_PASCAL_IMGS + image_file)
+        # numpy reads H x W x Channels // torch reads Channels x H x W
+        f = torch.ByteTensor(torch.from_numpy(np.rollaxis(f, 2)))
         fh, fw, _ = f.shape
         for _ in range(int(num_of_samples/len(non_person_images))):
-            rx = random.randint(0, fw - crop_size)
+            '''rx = random.randint(0, fw - crop_size)
             ry = random.randint(0, fh - crop_size)
-            p = (f[ry: ry + crop_size, rx: rx + crop_size])
-            # numpy reads H x W x Channels // torch reads Channels x H x W
-            rp = np.rollaxis(p, 2)
-            inputs[i, :, :, :] = torch.from_numpy(rp)
+            p = (f[ry: ry + crop_size, rx: rx + crop_size])'''
+            inputs[i, :, :, :] = to_tensor(crop(to_pil(f)))
+            # print(inputs[i, :, :, :])
             i += 1
             if not (i < num_of_samples):
                 break
