@@ -24,7 +24,13 @@ def train_model(model, criterion, optimizer, dset_loaders, dset_sizes, num_epoch
     for epoch in range(1, num_epochs + 1):
         print('Epoch {}/{}'.format(epoch, num_epochs))
         print('-' * 10)
-
+        '''
+        if not (epoch % 20):
+            lr = optimizer.param_groups[0]['lr'] * 0.5
+            for param_group in optimizer.param_groups:
+                param_group['lr'] = lr
+                print('Updated LR to be {}'.format(lr))
+        '''
         # Each epoch has a training and validation phase
         for phase in ['val', 'train']:
             if phase == 'train':
@@ -53,7 +59,6 @@ def train_model(model, criterion, optimizer, dset_loaders, dset_sizes, num_epoch
                 # backward + optimize only if in training phase
                 if phase == 'train':
                     loss.backward()
-                    optimizer.step()
                     optimizer.step()
 
                 # statistics
@@ -116,35 +121,44 @@ def Q2():
         model = FCN12()
         net_size = 12
         num_of_epochs = 50
-        batch_size = 64
+        batch_size = 128
         criterion = nn.CrossEntropyLoss()
-        optimizer = optim.Adam(model.parameters(), lr=5e-3)
+        optimizer = optim.Adam(model.parameters(), lr=0.001)
         pre_load = time.time()
+
         print('Getting AFLW data...')
         dataset, testDataset = get_positive_train_and_test_sets(net_size, 0.8)
+
         print('Creating the Data Loaders...')
-        trainloader = DataLoader(AFLW(net_size, dataset, num_of_neg_samples=len(dataset)), batch_size, shuffle=True)
-        testloader = DataLoader(AFLW(net_size, testDataset, num_of_neg_samples=len(dataset)), batch_size, shuffle=True)
+        trainloader = DataLoader(AFLW(net_size, dataset, num_of_neg_samples=len(dataset)*2), batch_size, shuffle=True)
+        testloader = DataLoader(AFLW(net_size, testDataset, num_of_neg_samples=len(testDataset)*2), batch_size, shuffle=True)
         dset_loaders = {'train': trainloader, 'val': testloader}
         dset_sizes = {'train': len(trainloader.dataset), 'val': len(testloader.dataset)}
+
         print('Loading time : {}'.format(time.time() - pre_load))
         best_model, losses = train_model(model, criterion, optimizer, dset_loaders, dset_sizes, num_epochs=num_of_epochs)
         torch.save(best_model, "FCN12.t7")
         plot_learning_curves(losses['train'], losses['val'], 'FCN12Net')
 
     # run detector and output results
-    d = SimpleDetector(best_model)
+    d = SimpleDetector(best_model, nms_threshold=0.9)
     img_list = get_fddb_image_paths()
     n = len(img_list)
+
     with open("fold-01-out.txt", 'w', newline='\n') as f:
         for idx, img in enumerate(img_list):
+
             sys.stdout.write("\rProcesing image number {0}/{1} : {2}".format(idx+1, n, img))
             sys.stdout.flush()
-            if os.name == 'nt':  # change path if we run from windows
+
+            if os.name == 'nt':  # change path separator if we run from windows
                 path = os.sep.join([PATH_TO_FDDB_IMAGES, img.replace('/', '\\') + '.jpg'])
             else:
                 path = os.sep.join([PATH_TO_FDDB_IMAGES, img + '.jpg'])
+
+            # run the 12-Detector
             res = d.detect(io.imread(path))
+
             f.write(img + '\n')
             f.write(str(len(res)) + '\n')
             for r in res:
@@ -154,7 +168,8 @@ def Q2():
 
 
 
-Q1()
+# Q1()
 
 Q2()
+
 

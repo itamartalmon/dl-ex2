@@ -10,7 +10,8 @@ class Det12(nn.Module):
     def __init__(self):
         super(Det12, self).__init__()
         self.conv = nn.Conv2d(in_channels=3, out_channels=16, kernel_size=3, stride=1)
-        self.fc = nn.Linear(in_features=16 * 4 * 4, out_features=2)
+        self.fc = nn.Linear(in_features=16 * 4 * 4, out_features=16)
+        self.fc1 = nn.Linear(in_features=16, out_features=2)
 
     def forward(self, x):
         '''
@@ -18,8 +19,6 @@ class Det12(nn.Module):
             A simple convolutional net for 12 X 12 images
         :param x:
             BatchSize X InputChannels X 12 X 12 Tensor
-        :param get_last_fc:
-            Boolean that states if we wish to return the last FC output instead of Sigmoid (False as defaults)
         :return:
             The probabilities of the face detection or the last FC layer outputs (depends on the input arg)
         '''
@@ -28,8 +27,9 @@ class Det12(nn.Module):
         x = F.relu(F.max_pool2d(x, kernel_size=3, stride=2))
         x = x.view(-1, 16 * 4 * 4)
         # this will be used in the Det24 Net
-        from_det12 = self.fc(x)
-        x = F.softmax(from_det12)
+        x = F.relu(self.fc(x))
+        x = self.fc1(x)
+        x = F.softmax(x)
         return x
 
 
@@ -37,7 +37,8 @@ class FCN12(nn.Module):
     def __init__(self):
         super(FCN12, self).__init__()
         self.conv = nn.Conv2d(in_channels=3, out_channels=16, kernel_size=3, stride=1)
-        self.conv2 = nn.Conv2d(in_channels=16, out_channels=2, kernel_size=4, stride=1)
+        self.conv2 = nn.Conv2d(in_channels=16, out_channels=16, kernel_size=4, stride=1)
+        self.conv3 = nn.Conv2d(in_channels=16, out_channels=2, kernel_size=1, stride=1)
 
     def forward(self, x):
         '''
@@ -45,8 +46,6 @@ class FCN12(nn.Module):
             A simple convolutional net for 12 X 12 images
         :param x:
             BatchSize X InputChannels X 12 X 12 Tensor
-        :param get_last_fc:
-            Boolean that states if we wish to return the last FC output instead of Sigmoid (False as defaults)
         :return:
             The probabilities of the face detection or the last FC layer outputs (depends on the input arg)
         '''
@@ -56,7 +55,8 @@ class FCN12(nn.Module):
         x = F.relu(F.max_pool2d(x, kernel_size=3, stride=2))
         #print(x.size())
         # this will be used in the Det24 Net
-        x = self.conv2(x)
+        x = F.relu(self.conv2(x))
+        x = self.conv3(x)
         #print(x.size())
         x = F.softmax(x)
         #print(x.size())
@@ -118,6 +118,29 @@ class SimpleDetector():
         return result_boxes
 
 
+class Det24(nn.Module):
+    def __init__(self):
+        super(Det24, self).__init__()
+        self.conv = nn.Conv2d(in_channels=3, out_channels=64, kernel_size=5, stride=1)
+        self.fc = nn.Linear(in_features=64 * 7 * 7, out_features=128)
+        self.fc1 = nn.Linear(in_features=128, out_features=2)
 
+    def forward(self, x):
+        '''
+        :summary:
+            A simple convolutional net for 24 X 24 images
+        :param x:
+            BatchSize X InputChannels X 24 X 24 Tensor
+        :return:
+            The probabilities of the face detection or the last FC layer outputs (depends on the input arg)
+        '''
+        x = x.view(-1, 3, 24, 24)
+        x = self.conv(x)
+        x = F.relu(F.max_pool2d(x, kernel_size=3, stride=2))
+        x = x.view(-1, 64 * 7 * 7)
+        x = F.relu(self.fc(x))
+        x = self.fc1(x)
+        x = F.softmax(x)
+        return x
 
 

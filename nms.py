@@ -8,7 +8,7 @@
 import numpy as np
 
 
-def py_cpu_nms(dets, thresh, to_eliptic_format=True):
+def py_cpu_nms(dets, thresh):
     """Pure Python NMS baseline."""
     x1 = dets[:, 0]
     y1 = dets[:, 1]
@@ -46,6 +46,9 @@ def py_cpu_nms(dets, thresh, to_eliptic_format=True):
         width = box[2] - box[0]
         height = box[3] - box[1]
         detection_score = box[4]
+        # twiks suggested in HW paper
+        top_y += int(0.2 * height)
+        height += int(0.2 * height)
         results.append([left_x, top_y, width, height, detection_score])
 
     return results
