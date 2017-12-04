@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torchvision.transforms import ToTensor, ToPILImage, Scale
-from skimage.transform import rescale
+from skimage.transform import rescale, resize
 import numpy as np
 from nms import py_cpu_nms
 
@@ -161,28 +161,35 @@ class BetterDetector():
         :param img: the image as torch tensor 3 x H x W
         :return: list of bounding boxes of the detected faces
         '''
+        # check if gray-scale
+        if len(np.shape(img)) != 3:
+            img = np.reshape(img, (np.shape(img)[0], np.shape(img)[1], 1))
+            img = np.concatenate((img, img, img), axis=2)
+
+        # get detection boxes from 12-detector
         bbox_from_12 = self.simple_detector.detect(img)
-        #img = np.rollaxis(img, 2)
         result = []
 
-        to_pil = ToPILImage()
-        scale_to_24 = Scale(size=24)
-        to_tensor = ToTensor()
-
         for box in bbox_from_12:
-            window = img[int(box[1]):int(box[1]+box[3]), int(box[0]):int(box[0]+box[2]), :]
-            window = scale_to_24(to_pil(window))
-            window = to_tensor(window)
-            window = to_tensor(np.rollaxis(window.numpy(), 2))
-            assert (window.size()) == torch.rand(24, 24, 3).size()
+
+            minx = int(box[1])
+            miny = int(box[0])
+            maxx = int(box[1]+box[3])
+            maxy = int(box[0]+box[2])
+
+            window = img[minx:maxx, miny:maxy, :]
+            window = resize(window, (24, 24, 3), preserve_range=True, mode='constant') / 255
+            window = torch.from_numpy(np.rollaxis(window, 2)).clone()
+            assert (window.size()) == torch.rand(3, 24, 24).size()
             window = torch.autograd.Variable(window.view(1, 3, 24, 24)).float()
             output = self.net(window)
             # if the new detector agrees with the simple one, keep the bbox
-            print(output)
-            _, pred = torch.max(output, dim=1)
+            # print(output)
+            val, pred = torch.max(output, dim=1)
             if float(pred.data[0]):
-                result.append([int(box[0]), int(box[1]), int(box[0]+box[2]), int(box[1]+box[3]), output[:, 1]])
+                result.append([minx, maxx, miny, maxy, val.data[0]])
 
+        print('24 removed {} out of {} boxes'.format(len(bbox_from_12) - len(result), len(bbox_from_12)))
         # run global NMS
         if len(result):
             result = py_cpu_nms(np.array(result), self.nms_threshold)

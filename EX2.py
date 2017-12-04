@@ -253,12 +253,12 @@ def Q4(reload=True, output_detected_images=False):
             res = d.detect(io.imread(path))
 
             if output_detected_images:
-                if not os.path.exists('outputs'):
-                    os.mkdir('outputs')
+                if not os.path.exists('outputs24'):
+                    os.mkdir('outputs24')
                 i = Image.open(path)
                 for box in res:
                     ImageDraw.Draw(i).rectangle((box[0], box[1], box[0] + box[2], box[1] + box[3]), outline="red")
-                i.save(os.sep.join(["outputs", path.split(os.sep)[-1]]))
+                i.save(os.sep.join(["outputs24", path.split(os.sep)[-1]]))
                 i.close()
 
             f.write(img + '\n')
@@ -274,6 +274,4 @@ def Q4(reload=True, output_detected_images=False):
 
 # Q3()
 
-Q4()
-
-
+Q4(output_detected_images=True)
