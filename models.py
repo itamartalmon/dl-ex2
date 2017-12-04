@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torchvision.transforms import ToTensor, ToPILImage, Scale
 from skimage.transform import rescale
 import numpy as np
 from nms import py_cpu_nms
@@ -161,15 +162,26 @@ class BetterDetector():
         :return: list of bounding boxes of the detected faces
         '''
         bbox_from_12 = self.simple_detector.detect(img)
-        img = np.rollaxis(img, 2).copy()
+        #img = np.rollaxis(img, 2)
         result = []
+
+        to_pil = ToPILImage()
+        scale_to_24 = Scale(size=24)
+        to_tensor = ToTensor()
+
         for box in bbox_from_12:
-            window = img[:, int(box[1]):int(box[1]+box[3]), int(box[0]):int(box[0]+box[2])]
-            window = torch.autograd.Variable(torch.from_numpy(window).view(-1, 3, 24, 24)).float()
+            window = img[int(box[1]):int(box[1]+box[3]), int(box[0]):int(box[0]+box[2]), :]
+            window = scale_to_24(to_pil(window))
+            window = to_tensor(window)
+            window = to_tensor(np.rollaxis(window.numpy(), 2))
+            assert (window.size()) == torch.rand(24, 24, 3).size()
+            window = torch.autograd.Variable(window.view(1, 3, 24, 24)).float()
             output = self.net(window)
             # if the new detector agrees with the simple one, keep the bbox
-            if output[:, 1, :, :] > 0.5:
-                result.append([int(box[0]), int(box[1]), int(box[0]+box[2]), int(box[1]+box[3]), output[:, 1, :, :]])
+            print(output)
+            _, pred = torch.max(output, dim=1)
+            if float(pred.data[0]):
+                result.append([int(box[0]), int(box[1]), int(box[0]+box[2]), int(box[1]+box[3]), output[:, 1]])
 
         # run global NMS
         if len(result):

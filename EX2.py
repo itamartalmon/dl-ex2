@@ -13,7 +13,7 @@ from torchvision.transforms import ToPILImage
 
 from plot_utils import plot_learning_curves
 from input_handler import AFLW, get_positive_train_and_test_sets, get_negative_samples, get_fddb_image_paths, PATH_TO_FDDB_IMAGES
-from models import Det12, FCN12, SimpleDetector, Det24
+from models import Det12, FCN12, SimpleDetector, Det24, BetterDetector
 from negative_mining import create_negative_examples
 
 from skimage import io
@@ -185,7 +185,7 @@ def Q3():
     model = Det24()
     net_size = 24
     batch_size = 128
-    num_of_epochs = 20
+    num_of_epochs = 100
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=5e-3)
     pre_load = time.time()
@@ -216,11 +216,64 @@ def Q3():
     torch.save(best_model, "Det24.t7")
     plot_learning_curves(losses['train'], losses['val'], 'Detection24Net')
 
+def Q4(reload=True, output_detected_images=False):
+    '''
+    test Better Detector and output to file
+    '''
+    if os.path.isfile("FCN12.t7") and reload:
+        m12 = torch.load("FCN12.t7")
+    else:
+        # train 12
+        pass
+    simple_d = SimpleDetector(m12, nms_threshold=0.8)
+
+    if os.path.isfile("Det24.t7") and reload:
+        m24 = torch.load("Det24.t7")
+    else:
+        # train 24
+        pass
+
+    d = BetterDetector(m24, simple_d, nms_threshold=0.8)
+
+    img_list = get_fddb_image_paths()
+    n = len(img_list)
+
+    with open("fold-01-out-24.txt", 'w', newline='\n') as f:
+        for idx, img in enumerate(img_list):
+
+            sys.stdout.write("\rProcesing image number {0}/{1} : {2}".format(idx+1, n, img))
+            sys.stdout.flush()
+
+            if os.name == 'nt':  # change path separator if we run from windows
+                path = os.sep.join([PATH_TO_FDDB_IMAGES, img.replace('/', '\\') + '.jpg'])
+            else:
+                path = os.sep.join([PATH_TO_FDDB_IMAGES, img + '.jpg'])
+
+            # run the Better-Detector
+            res = d.detect(io.imread(path))
+
+            if output_detected_images:
+                if not os.path.exists('outputs'):
+                    os.mkdir('outputs')
+                i = Image.open(path)
+                for box in res:
+                    ImageDraw.Draw(i).rectangle((box[0], box[1], box[0] + box[2], box[1] + box[3]), outline="red")
+                i.save(os.sep.join(["outputs", path.split(os.sep)[-1]]))
+                i.close()
+
+            f.write(img + '\n')
+            f.write(str(len(res)) + '\n')
+            for r in res:
+                s = ' '.join([str(x) for x in r])
+                f.write(s + '\n')
+
 
 # Q1()
 
-# Q2(reload=False, output_detected_images=False)
+# Q2(reload=True, output_detected_images=True)
 
-Q3()
+# Q3()
+
+Q4()
 
 
