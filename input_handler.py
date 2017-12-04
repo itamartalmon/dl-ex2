@@ -8,16 +8,16 @@ from torch.utils.serialization import load_lua
 from torchvision.transforms import RandomSizedCrop, ToPILImage, ToTensor
 import os, random
 
-PATH_TO_DATA_FOLDER = "C:\\Users\\Itamar Talmon\\Dropbox\\Masters\\SecondYear\\Deep Learning\\EX2\\EX2_data\\"
-PATH_TO_AFLW = PATH_TO_DATA_FOLDER + "aflw\\"
-PATH_TO_FDDB = PATH_TO_DATA_FOLDER + "fddb\\"
+PATH_TO_DATA_FOLDER = "EX2_data" + os.sep
+PATH_TO_AFLW = PATH_TO_DATA_FOLDER + "aflw" + os.sep
+PATH_TO_FDDB = PATH_TO_DATA_FOLDER + "fddb" + os.sep
 PATH_TO_FDDB_IMAGES = os.sep.join([PATH_TO_FDDB, 'images'])
 PATH_TO_FDDB_IMAGE_PATHES_FILE = os.sep.join([PATH_TO_FDDB, 'FDDB-folds', 'FDDB-fold-01.txt'])
 AFLW_12 = PATH_TO_AFLW + "aflw_12.t7"
 AFLW_24 = PATH_TO_AFLW + "aflw_24.t7"
-PATH_TO_PASCAL_FOLDER = "C:\\Users\\Itamar Talmon\\Downloads\\VOCtrainval_06-Nov-2007\\VOCdevkit\VOC2007\\"
-PATH_TO_PASCAL_IMGS = PATH_TO_PASCAL_FOLDER + "JPEGImages\\"
-PATH_TO_PASCAL_LABELS = PATH_TO_PASCAL_FOLDER + "ImageSets\\Main\\person_trainval.txt"
+PATH_TO_PASCAL_FOLDER = os.sep.join(["VOCdevkit", "VOC2007"])
+PATH_TO_PASCAL_IMGS = PATH_TO_PASCAL_FOLDER + os.sep +"JPEGImages" + os.sep
+PATH_TO_PASCAL_LABELS = PATH_TO_PASCAL_FOLDER + os.sep + "ImageSets" + os.sep + "Main" + os.sep + "person_trainval.txt"
 
 def load_t7_imgs(path):
     '''
