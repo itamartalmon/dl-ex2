@@ -42,13 +42,13 @@ def py_cpu_nms(dets, thresh):
         box = dets[i]
         # left_x top_y width height detection_score
         left_x = box[0]
-        top_y = box[3]
+        top_y = box[1]
         width = box[2] - box[0]
         height = box[3] - box[1]
         detection_score = box[4]
         # twiks suggested in HW paper
-        top_y += int(0.2 * height)
-        height += int(0.2 * height)
+        # top_y -= int(0.2 * height)
+        # height += int(0.2 * height)
         results.append([left_x, top_y, width, height, detection_score])
 
     return results

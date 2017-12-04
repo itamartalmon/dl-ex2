@@ -67,7 +67,7 @@ class SimpleDetector():
     '''
     Simple detector with 12FCN net
     '''
-    def __init__(self, net, scale_list=[0.5, 0.25, 0.1, 0.07, 0.05], nms_threshold=0.8):
+    def __init__(self, net, scale_list=[0.5, 0.2, 0.1, 0.07, 0.05, 0.04, 0.03, 0.02, 0.01], nms_threshold=0.8):
         self.net = net
         self.scale_list = scale_list
         self.nms_threshold = nms_threshold
@@ -85,6 +85,8 @@ class SimpleDetector():
         # print(img.shape)
         result_boxes = []
         for scale in self.scale_list:
+            if (scale*min([img.shape[0], img.shape[1]])) < 20:
+                break
             resized_image = rescale(img, scale, mode='constant', preserve_range=True)
             resized_image = np.rollaxis(resized_image, 2).copy()
             resized_image = np.uint8(resized_image / 255)
@@ -100,12 +102,10 @@ class SimpleDetector():
                 for w in range(W):
                     if preds.data[h, w] == 1:
                         score = heatmap.data[h, w]
-                        # print(score)
                         xmin = int(w*(1/scale))
                         xmax = int((w + 12)*(1/scale))
                         ymin = int(h*(1/scale))
                         ymax = int((h + 12)*(1/scale))
-                        # print(ymin, ymax, xmin, xmax)
                         croped_img = img[ymin: ymax, xmin: xmax]
                         # print(croped_img.shape)
                         bboxes.append([xmin, ymin, xmax, ymax, score])
@@ -122,7 +122,7 @@ class Det24(nn.Module):
     def __init__(self):
         super(Det24, self).__init__()
         self.conv = nn.Conv2d(in_channels=3, out_channels=64, kernel_size=5, stride=1)
-        self.fc = nn.Linear(in_features=64 * 7 * 7, out_features=128)
+        self.fc = nn.Linear(in_features=64 * 9 * 9, out_features=128)
         self.fc1 = nn.Linear(in_features=128, out_features=2)
 
     def forward(self, x):
@@ -137,10 +137,43 @@ class Det24(nn.Module):
         x = x.view(-1, 3, 24, 24)
         x = self.conv(x)
         x = F.relu(F.max_pool2d(x, kernel_size=3, stride=2))
-        x = x.view(-1, 64 * 7 * 7)
+        x = x.view(-1, 64 * 9 * 9)
         x = F.relu(self.fc(x))
         x = self.fc1(x)
         x = F.softmax(x)
         return x
 
+
+class BetterDetector():
+    '''
+    Better detector with 24FCN net and 12-Detector
+    '''
+    def __init__(self, net, simple_detector, scale_list=[0.5, 0.2, 0.1, 0.07, 0.05, 0.04, 0.03, 0.02], nms_threshold=0.8):
+        self.net = net
+        self.simple_detector = simple_detector
+        self.scale_list = scale_list
+        self.nms_threshold = nms_threshold
+
+    def detect(self, img):
+        '''
+        Run face detection on a single image
+        :param img: the image as torch tensor 3 x H x W
+        :return: list of bounding boxes of the detected faces
+        '''
+        bbox_from_12 = self.simple_detector.detect(img)
+        img = np.rollaxis(img, 2).copy()
+        result = []
+        for box in bbox_from_12:
+            window = img[:, int(box[1]):int(box[1]+box[3]), int(box[0]):int(box[0]+box[2])]
+            window = torch.autograd.Variable(torch.from_numpy(window).view(-1, 3, 24, 24)).float()
+            output = self.net(window)
+            # if the new detector agrees with the simple one, keep the bbox
+            if output[:, 1, :, :] > 0.5:
+                result.append([int(box[0]), int(box[1]), int(box[0]+box[2]), int(box[1]+box[3]), output[:, 1, :, :]])
+
+        # run global NMS
+        if len(result):
+            result = py_cpu_nms(np.array(result), self.nms_threshold)
+
+        return result
 

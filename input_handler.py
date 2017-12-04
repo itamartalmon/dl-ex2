@@ -43,15 +43,7 @@ def get_negative_samples(num_of_samples, crop_size):
     :return: torch Tensor with image patches
     '''
     inputs = torch.Tensor(num_of_samples, 3, crop_size, crop_size)
-
-    img_file_list = os.listdir(PATH_TO_PASCAL_IMGS)
-    person_labels = {}
-    with open(PATH_TO_PASCAL_LABELS) as person_label_file:
-        for line in person_label_file.read().strip().split('\n'):
-            name, label = line.strip().split()
-            person_labels[name + '.jpg'] = label == '1'
-    # remove all person-labeled images
-    non_person_images = [img for img in img_file_list if not person_labels[img]]
+    non_person_images = get_background_images()
     i = 0
     crop = RandomSizedCrop(crop_size)
     to_pil = ToPILImage()
@@ -91,16 +83,10 @@ def get_positive_train_and_test_sets(net_size, train_frac=0.8):
 class AFLW(Dataset):
     """AFLW dataset."""
 
-    def __init__(self, net_size, inputs_tensor, num_of_neg_samples=None):
-        # if not specified, num_of_negative == num_of_positive
-        num_of_neg_samples = len(inputs_tensor) if not num_of_neg_samples else num_of_neg_samples
-        self.net_size = len(inputs_tensor[0, 0])
+    def __init__(self, net_size, positive_samples, negative_samples, num_of_neg_samples=None):
         assert (net_size in [12, 24]), "illegal net_size {0}!".format(net_size)
-        self.positive_samples = inputs_tensor
-        self.negative_samples = get_negative_samples(num_of_neg_samples, net_size)
-        self.training_images = torch.cat([self.positive_samples, self.negative_samples], 0)
-        self.training_labels = torch.cat([torch.ones(len(self.positive_samples)),
-                                          torch.zeros(len(self.negative_samples))], 0).long()
+        self.training_images = torch.cat([positive_samples, negative_samples], 0)
+        self.training_labels = torch.cat([torch.ones(len(positive_samples)), torch.zeros(len(negative_samples))], 0).long()
 
     def __len__(self):
         return len(self.training_images)
@@ -108,16 +94,13 @@ class AFLW(Dataset):
     def __getitem__(self, idx):
         return self.training_images[idx], self.training_labels[idx]
 
-    def show_image(self, idx):
-        image, _ = self.__getitem__(idx)
-        plt.imshow(image.reshape(-1, self.net_size, self.net_size))
-        plt.pause(1)
 
 def show_patch(p):
     i = np.rollaxis(p.numpy(), 2)
     i = np.rollaxis(i, 2)
     plt.imshow(i.astype(np.uint8))
     plt.pause(10)
+    plt.draw()
 
 
 def get_fddb_image_paths():
@@ -125,3 +108,13 @@ def get_fddb_image_paths():
         path_list = rf.read().strip().split('\n')
     return path_list
 
+
+def get_background_images():
+    img_file_list = os.listdir(PATH_TO_PASCAL_IMGS)
+    person_labels = {}
+    with open(PATH_TO_PASCAL_LABELS) as person_label_file:
+        for line in person_label_file.read().strip().split('\n'):
+            name, label = line.strip().split()
+            person_labels[name + '.jpg'] = label == '1'
+    # remove all person-labeled images
+    return [img for img in img_file_list if not person_labels[img]]

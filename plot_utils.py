@@ -15,7 +15,7 @@ def plot_learning_curves(train_losses, test_losses, name):
 
     ax.legend()
     ax.grid()
-    ax.set_ylim(bottom=0.005, top=0.01)
+    ax.set_ylim(bottom=0.002, top=0.005)
     pyplot.yscale('log')
     pyplot.ylabel('CrossEntropy')
     pyplot.xlabel('Epochs')
