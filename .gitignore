@@ -156,3 +156,7 @@ fabric.properties
 .idea/workspace.xml
 aflw/
 fddb/
+EX2_data/
+VOCdevkit/
+outputs24/
+outputs/

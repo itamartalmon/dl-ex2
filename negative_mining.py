@@ -9,7 +9,7 @@ from random import choice
 
 def create_negative_examples(_12_detector, num_of_samples):
 
-    result = torch.ByteTensor(num_of_samples, 3, 24, 24)
+    result = None  # torch.ByteTensor(num_of_samples, 3, 24, 24)
 
     to_pil = ToPILImage()
     scale_to_24 = Scale(size=24)
@@ -24,9 +24,13 @@ def create_negative_examples(_12_detector, num_of_samples):
         res = _12_detector.detect(f)
         f = torch.ByteTensor(torch.from_numpy(np.rollaxis(f, 2)))
         for box in res:
-            cropped_image = f[:, int(box[1]):int(box[1]+box[3]), int(box[0]):int(box[0]+box[2])]
+            cropped_image = f[:, int(box[1]):int(box[3]), int(box[0]):int(box[2])]
             cropped_image = to_tensor(scale_to_24(to_pil(cropped_image)))
-            result[i, :, :, :] = [result, cropped_image.view(-1, 3, 24, 24)]
+            if result is None:
+                result = cropped_image.view(1, 3, 24, 24)
+            else:
+                result = torch.cat([result, cropped_image.view(1, 3, 24, 24)])
+            # result[i, :, :, :] = [result, cropped_image.view(1, 3, 24, 24)]
             i += 1
             if not (i < num_of_samples):
                 break

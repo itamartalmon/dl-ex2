@@ -50,17 +50,12 @@ class FCN12(nn.Module):
         :return:
             The probabilities of the face detection or the last FC layer outputs (depends on the input arg)
         '''
-        #print(x.size())
         x = self.conv(x)
-        #print(x.size())
         x = F.relu(F.max_pool2d(x, kernel_size=3, stride=2))
-        #print(x.size())
         # this will be used in the Det24 Net
         x = F.relu(self.conv2(x))
         x = self.conv3(x)
-        #print(x.size())
         x = F.softmax(x)
-        #print(x.size())
         return x
 
 
@@ -88,32 +83,38 @@ class SimpleDetector():
         for scale in self.scale_list:
             if (scale*min([img.shape[0], img.shape[1]])) < 20:
                 break
+            ratio = 1 / scale
             resized_image = rescale(img, scale, mode='constant', preserve_range=True)
             resized_image = np.rollaxis(resized_image, 2).copy()
             resized_image = np.uint8(resized_image / 255)
             resized_image = torch.autograd.Variable(torch.from_numpy(resized_image).view(-1, *resized_image.shape)).float()
             output = self.net(resized_image)
             # output size is 1 X 2 X H X W
-            heatmap = output[:, 1, :, :] # take the probability of detecting Face class ( 1 X H X W )
-            heatmap = heatmap.view(heatmap.size()[-2], heatmap.size()[-1]) # resize to matrix form ( H X W )
-            preds = heatmap > 0.5 # 1 is we predict a face, 0 o/w
+            heatmap = output[0, 1, :, :]  # take the probability of detecting Face class ( 1 X H X W )
+            preds = heatmap > 0.5  # 1 is we predict a face, 0 o/w
             H, W = preds.size()
             bboxes = []
             for h in range(H):
                 for w in range(W):
                     if preds.data[h, w] == 1:
                         score = heatmap.data[h, w]
-                        xmin = int(w*(1/scale))
-                        xmax = int((w + 12)*(1/scale))
-                        ymin = int(h*(1/scale))
-                        ymax = int((h + 12)*(1/scale))
-                        croped_img = img[ymin: ymax, xmin: xmax]
+                        xmin = min(int(2 * w * ratio), img.shape[1]-int(12 * ratio))
+                        xmax = xmin + int(12 * ratio)
+                        ymin = min(int(2 * h * ratio), img.shape[0]-int(12 * ratio))
+                        ymax = ymin + int(12 * ratio)
+                        # TODO: check if these lines are correct
+                        # xmin = int(w*(1/scale))
+                        # xmax = int((w + 12)*(1/scale))
+                        # ymin = int(h*(1/scale))
+                        # ymax = int((h + 12)*(1/scale))
+                        # croped_img = img[ymin: ymax, xmin: xmax]
                         # print(croped_img.shape)
                         bboxes.append([xmin, ymin, xmax, ymax, score])
             # run NMS per scale
+            # print('\tbefore NMS in scale {}: {}'.format(scale, len(bboxes)))
             if len(bboxes):
                 bboxes = py_cpu_nms(np.array(bboxes), self.nms_threshold)
-            # print(len(bboxes))
+            # print('\tafter NMS in scale {}: {}'.format(scale, len(bboxes)))
             result_boxes += bboxes
         # print(result_boxes)
         return result_boxes
@@ -171,12 +172,7 @@ class BetterDetector():
         result = []
 
         for box in bbox_from_12:
-
-            minx = int(box[1])
-            miny = int(box[0])
-            maxx = int(box[1]+box[3])
-            maxy = int(box[0]+box[2])
-
+            miny, minx, maxy, maxx, _ = list(map(int, box))
             window = img[minx:maxx, miny:maxy, :]
             window = resize(window, (24, 24, 3), preserve_range=True, mode='constant') / 255
             window = torch.from_numpy(np.rollaxis(window, 2)).clone()

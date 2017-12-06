@@ -1,12 +1,15 @@
 from __future__ import print_function, division
-from skimage import io
-import numpy as np
+
+import os
+import random
+
 import matplotlib.pyplot as plt
+import numpy as np
 import torch
+from skimage import io
 from torch.utils.data import Dataset
 from torch.utils.serialization import load_lua
 from torchvision.transforms import RandomSizedCrop, ToPILImage, ToTensor
-import os, random
 
 PATH_TO_DATA_FOLDER = "EX2_data" + os.sep
 PATH_TO_AFLW = PATH_TO_DATA_FOLDER + "aflw" + os.sep
@@ -16,8 +19,9 @@ PATH_TO_FDDB_IMAGE_PATHES_FILE = os.sep.join([PATH_TO_FDDB, 'FDDB-folds', 'FDDB-
 AFLW_12 = PATH_TO_AFLW + "aflw_12.t7"
 AFLW_24 = PATH_TO_AFLW + "aflw_24.t7"
 PATH_TO_PASCAL_FOLDER = os.sep.join(["VOCdevkit", "VOC2007"])
-PATH_TO_PASCAL_IMGS = PATH_TO_PASCAL_FOLDER + os.sep +"JPEGImages" + os.sep
+PATH_TO_PASCAL_IMGS = PATH_TO_PASCAL_FOLDER + os.sep + "JPEGImages" + os.sep
 PATH_TO_PASCAL_LABELS = PATH_TO_PASCAL_FOLDER + os.sep + "ImageSets" + os.sep + "Main" + os.sep + "person_trainval.txt"
+
 
 def load_t7_imgs(path):
     '''
@@ -35,6 +39,7 @@ def load_t7_imgs(path):
         # k - 1 is necessary since Lua is 1-indexed and Python is 0-indexed
         inputs[k - 1] = torch.Tensor(v)
     return inputs
+
 
 def get_negative_samples(num_of_samples, crop_size):
     '''
@@ -55,7 +60,7 @@ def get_negative_samples(num_of_samples, crop_size):
         # numpy reads H x W x Channels // torch reads Channels x H x W
         f = torch.ByteTensor(torch.from_numpy(np.rollaxis(f, 2)))
         fh, fw, _ = f.shape
-        for _ in range(int(num_of_samples/len(non_person_images))):
+        for _ in range(int(num_of_samples / len(non_person_images))):
             '''rx = random.randint(0, fw - crop_size)
             ry = random.randint(0, fh - crop_size)
             p = (f[ry: ry + crop_size, rx: rx + crop_size])'''
@@ -74,7 +79,7 @@ def get_positive_train_and_test_sets(net_size, train_frac=0.8):
     img_data = load_t7_imgs(path).numpy()
     # Split the data frame to train and test sets randomly
     np.random.shuffle(img_data)
-    idx = int(train_frac*len(img_data))
+    idx = int(train_frac * len(img_data))
     img_data = torch.from_numpy(img_data)
     train, test = img_data[:idx], img_data[idx:]
     return train, test
@@ -83,10 +88,11 @@ def get_positive_train_and_test_sets(net_size, train_frac=0.8):
 class AFLW(Dataset):
     """AFLW dataset."""
 
-    def __init__(self, net_size, positive_samples, negative_samples, num_of_neg_samples=None):
+    def __init__(self, net_size, positive_samples, negative_samples):
         assert (net_size in [12, 24]), "illegal net_size {0}!".format(net_size)
         self.training_images = torch.cat([positive_samples, negative_samples], 0)
-        self.training_labels = torch.cat([torch.ones(len(positive_samples)), torch.zeros(len(negative_samples))], 0).long()
+        self.training_labels = torch.cat([torch.ones(len(positive_samples)), torch.zeros(len(negative_samples))],
+                                         0).long()
 
     def __len__(self):
         return len(self.training_images)
@@ -115,6 +121,7 @@ def get_background_images():
     with open(PATH_TO_PASCAL_LABELS) as person_label_file:
         for line in person_label_file.read().strip().split('\n'):
             name, label = line.strip().split()
-            person_labels[name + '.jpg'] = label == '1'
+            # '1' means person, '0' means difficult person and '-1' means no person
+            person_labels[name + '.jpg'] = label != '-1'
     # remove all person-labeled images
     return [img for img in img_file_list if not person_labels[img]]

@@ -1,30 +1,29 @@
-import time
 import copy
 import os
+import pickle
 import sys
+import time
 
-# import torchfile
 import torch
-import torch.nn as nn
+from PIL import Image, ImageDraw
+from skimage import io
+from torch import optim, nn
 from torch.autograd import Variable
-import torch.optim as optim
 from torch.utils.data import DataLoader
-from torchvision.transforms import ToPILImage
 
-from plot_utils import plot_learning_curves
-from input_handler import AFLW, get_positive_train_and_test_sets, get_negative_samples, get_fddb_image_paths, PATH_TO_FDDB_IMAGES
+from input_handler import AFLW, get_positive_train_and_test_sets, get_negative_samples, get_fddb_image_paths, \
+    PATH_TO_FDDB_IMAGES
 from models import Det12, FCN12, SimpleDetector, Det24, BetterDetector
 from negative_mining import create_negative_examples
+from plot_utils import plot_learning_curves
 
-from skimage import io
-from PIL import Image, ImageDraw
 
 def train_model(model, criterion, optimizer, dset_loaders, dset_sizes, num_epochs=25):
     since = time.time()
 
     best_model = model
     best_acc = 0.0
-    losses = {'train' : [], 'val': []}
+    losses = {'train': [], 'val': []}
 
     for epoch in range(1, num_epochs + 1):
         print('Epoch {}/{}'.format(epoch, num_epochs))
@@ -85,10 +84,10 @@ def train_model(model, criterion, optimizer, dset_loaders, dset_sizes, num_epoch
         print()
 
     time_elapsed = time.time() - since
-    print('Training complete in {:.0f}m {:.0f}s'.format(
-        time_elapsed // 60, time_elapsed % 60))
+    print('Training complete in {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60))
     print('Best val Acc: {:4f}'.format(best_acc))
     return best_model, losses
+
 
 def Q1():
     '''
@@ -104,13 +103,15 @@ def Q1():
     print('Getting AFLW data...')
     dataset, testDataset = get_positive_train_and_test_sets(net_size, train_frac=0.8)
     print('Creating the Data Loaders...')
-    trainloader = DataLoader(AFLW(net_size, dataset, get_negative_samples(net_size, len(dataset))), batch_size, shuffle=True)
-    testloader = DataLoader(AFLW(net_size, testDataset, get_negative_samples(net_size, len(testDataset))), batch_size, shuffle=True)
+    trainloader = DataLoader(AFLW(net_size, dataset, get_negative_samples(net_size, len(dataset))), batch_size,
+                             shuffle=True)
+    testloader = DataLoader(AFLW(net_size, testDataset, get_negative_samples(net_size, len(testDataset))), batch_size,
+                            shuffle=True)
     dset_loaders = {'train': trainloader, 'val': testloader}
     dset_sizes = {'train': len(trainloader.dataset), 'val': len(testloader.dataset)}
     print('Loading time : {}'.format(time.time() - pre_load))
     best_model, losses = train_model(model, criterion, optimizer, dset_loaders, dset_sizes, num_of_epochs)
-    torch.save(best_model, "Det12.t7")
+    torch.save(best_model, 'Det12.t7')
     plot_learning_curves(losses['train'], losses['val'], 'Detection12Net')
 
 
@@ -126,20 +127,35 @@ def Q2(reload=True, output_detected_images=False):
         num_of_epochs = 500
         batch_size = 128
         criterion = nn.CrossEntropyLoss()
-        optimizer = optim.Adam(model.parameters(), lr=0.005)
+        optimizer = optim.Adam(model.parameters(), lr=5e-3)
         pre_load = time.time()
 
         print('Getting AFLW data...')
-        dataset, testDataset = get_positive_train_and_test_sets(net_size, 0.8)
+        train, test = get_positive_train_and_test_sets(net_size, 0.8)
+        trainloader_path = 'q2_trainloader.plk'
+        testloader_path = 'q2_testloader.plk'
+        if not os.path.isfile(trainloader_path) or not os.path.isfile(testloader_path):
+            print('Creating the Data Loaders...')
+            trainloader = DataLoader(AFLW(net_size, train, get_negative_samples(len(train), net_size)), batch_size,
+                                     shuffle=True)
+            testloader = DataLoader(AFLW(net_size, test, get_negative_samples(len(test), net_size)), batch_size,
+                                    shuffle=True)
+            with open(trainloader_path, 'wb') as output:
+                pickle.dump(trainloader, output)
+            with open(testloader_path, 'wb') as output:
+                pickle.dump(testloader, output)
+        else:
+            print('Loading the Data Loaders...')
+            with open(trainloader_path, 'rb') as input:
+                trainloader = pickle.load(input)
+            with open(testloader_path, 'rb') as input:
+                testloader = pickle.load(input)
 
-        print('Creating the Data Loaders...')
-        trainloader = DataLoader(AFLW(net_size, dataset, get_negative_samples(len(dataset), net_size)), batch_size, shuffle=True)
-        testloader = DataLoader(AFLW(net_size, testDataset, get_negative_samples(len(dataset), net_size)), batch_size, shuffle=True)
         dset_loaders = {'train': trainloader, 'val': testloader}
         dset_sizes = {'train': len(trainloader.dataset), 'val': len(testloader.dataset)}
 
         print('Loading time : {}'.format(time.time() - pre_load))
-        best_model, losses = train_model(model, criterion, optimizer, dset_loaders, dset_sizes, num_epochs=num_of_epochs)
+        best_model, losses = train_model(model, criterion, optimizer, dset_loaders, dset_sizes, num_of_epochs)
         torch.save(best_model, "FCN12.t7")
         plot_learning_curves(losses['train'], losses['val'], 'FCN12Net')
 
@@ -151,7 +167,7 @@ def Q2(reload=True, output_detected_images=False):
     with open("fold-01-out.txt", 'w', newline='\n') as f:
         for idx, img in enumerate(img_list):
 
-            sys.stdout.write("\rProcesing image number {0}/{1} : {2}".format(idx+1, n, img))
+            sys.stdout.write("\rProcessing image number {0}/{1} : {2}".format(idx + 1, n, img))
             sys.stdout.flush()
 
             if os.name == 'nt':  # change path separator if we run from windows
@@ -167,7 +183,7 @@ def Q2(reload=True, output_detected_images=False):
                     os.mkdir('outputs')
                 i = Image.open(path)
                 for box in res:
-                    ImageDraw.Draw(i).rectangle((box[0], box[1], box[0] + box[2], box[1] + box[3]), outline="red")
+                    ImageDraw.Draw(i).rectangle(box[0:4], outline="red")
                 i.save(os.sep.join(["outputs", path.split(os.sep)[-1]]))
                 i.close()
 
@@ -176,6 +192,7 @@ def Q2(reload=True, output_detected_images=False):
             for r in res:
                 s = ' '.join([str(x) for x in r])
                 f.write(s + '\n')
+    return best_model
 
 
 def Q3():
@@ -199,22 +216,22 @@ def Q3():
     else:
         m = torch.load('FCN12.t7')
         d = SimpleDetector(m, scale_list=[0.2, 0.1, 0.05], nms_threshold=0.7)
-        negative_sampled = create_negative_examples(d, num_of_samples=len(dataset)+len(testDataset))
+        negative_sampled = create_negative_examples(d, num_of_samples=len(dataset) + len(testDataset))
         torch.save(negative_sampled, 'mined_negative_samples_for_24.t7')
         print(negative_sampled.size())
 
     print('Creating the Data Loaders...')
-    trainloader = DataLoader(AFLW(net_size, dataset, negative_sampled[:len(dataset)]),
-                             batch_size, shuffle=True)
-    testloader = DataLoader(AFLW(net_size, testDataset, negative_sampled[len(dataset):]),
-                            batch_size, shuffle=True)
+    trainloader = DataLoader(AFLW(net_size, dataset, negative_sampled[:len(dataset)]), batch_size, shuffle=True)
+    testloader = DataLoader(AFLW(net_size, testDataset, negative_sampled[len(dataset):]), batch_size, shuffle=True)
     dset_loaders = {'train': trainloader, 'val': testloader}
     dset_sizes = {'train': len(trainloader.dataset), 'val': len(testloader.dataset)}
     print('Loading time : {}'.format(time.time() - pre_load))
 
     best_model, losses = train_model(model, criterion, optimizer, dset_loaders, dset_sizes, num_of_epochs)
-    torch.save(best_model, "Det24.t7")
+    torch.save(best_model, 'Det24.t7')
     plot_learning_curves(losses['train'], losses['val'], 'Detection24Net')
+    return best_model
+
 
 def Q4(reload=True, output_detected_images=False):
     '''
@@ -223,15 +240,13 @@ def Q4(reload=True, output_detected_images=False):
     if os.path.isfile("FCN12.t7") and reload:
         m12 = torch.load("FCN12.t7")
     else:
-        # train 12
-        pass
+        m12 = Q2(output_detected_images=True)
     simple_d = SimpleDetector(m12, nms_threshold=0.8)
 
     if os.path.isfile("Det24.t7") and reload:
         m24 = torch.load("Det24.t7")
     else:
-        # train 24
-        pass
+        m24 = Q3()
 
     d = BetterDetector(m24, simple_d, nms_threshold=0.8)
 
@@ -241,7 +256,7 @@ def Q4(reload=True, output_detected_images=False):
     with open("fold-01-out-24.txt", 'w', newline='\n') as f:
         for idx, img in enumerate(img_list):
 
-            sys.stdout.write("\rProcesing image number {0}/{1} : {2}".format(idx+1, n, img))
+            sys.stdout.write("\rProcessing image number {0}/{1} : {2}".format(idx + 1, n, img))
             sys.stdout.flush()
 
             if os.name == 'nt':  # change path separator if we run from windows

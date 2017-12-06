@@ -36,15 +36,14 @@ def py_cpu_nms(dets, thresh):
         inds = np.where(ovr <= thresh)[0]
         order = order[inds + 1]
 
-    # format to DDDB Rectangular format
     results = []
     for i in keep:
         box = dets[i]
         # left_x top_y width height detection_score
         left_x = box[0]
         top_y = box[1]
-        width = box[2] - box[0]
-        height = box[3] - box[1]
+        width = box[2]
+        height = box[3]
         detection_score = box[4]
         # twiks suggested in HW paper
         # top_y -= int(0.2 * height)
