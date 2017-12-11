@@ -86,7 +86,7 @@ class SimpleDetector():
             ratio = 1 / scale
             resized_image = rescale(img, scale, mode='constant', preserve_range=True)
             resized_image = np.rollaxis(resized_image, 2).copy()
-            resized_image = np.uint8(resized_image / 255)
+            resized_image = resized_image / 255
             resized_image = torch.autograd.Variable(torch.from_numpy(resized_image).view(-1, *resized_image.shape)).float()
             output = self.net(resized_image)
             # output size is 1 X 2 X H X W
