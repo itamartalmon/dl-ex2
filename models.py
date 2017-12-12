@@ -102,11 +102,6 @@ class SimpleDetector():
                         xmax = xmin + int(12 * ratio)
                         ymin = min(int(2 * h * ratio), img.shape[0]-int(12 * ratio))
                         ymax = ymin + int(12 * ratio)
-                        # TODO: check if these lines are correct
-                        # xmin = int(w*(1/scale))
-                        # xmax = int((w + 12)*(1/scale))
-                        # ymin = int(h*(1/scale))
-                        # ymax = int((h + 12)*(1/scale))
                         # croped_img = img[ymin: ymax, xmin: xmax]
                         # print(croped_img.shape)
                         bboxes.append([xmin, ymin, xmax, ymax, score])
@@ -150,11 +145,11 @@ class BetterDetector():
     '''
     Better detector with 24FCN net and 12-Detector
     '''
-    def __init__(self, net, simple_detector, scale_list=[0.5, 0.2, 0.1, 0.07, 0.05, 0.04, 0.03, 0.02], nms_threshold=0.8):
+    def __init__(self, net, small_net, scale_list=[0.5, 0.2, 0.1, 0.07, 0.05, 0.04, 0.03, 0.02], nms_threshold=0.8):
         self.net = net
-        self.simple_detector = simple_detector
         self.scale_list = scale_list
         self.nms_threshold = nms_threshold
+        self.simple_detector = SimpleDetector(small_net, scale_list, nms_threshold=0.8)
 
     def detect(self, img):
         '''
@@ -172,8 +167,8 @@ class BetterDetector():
         result = []
 
         for box in bbox_from_12:
-            miny, minx, maxy, maxx, _ = list(map(int, box))
-            window = img[minx:maxx, miny:maxy, :]
+            xmin, ymin, xmax, ymax, _ = list(map(int, box))
+            window = img[ymin:ymax, xmin:xmax, :]
             window = resize(window, (24, 24, 3), preserve_range=True, mode='constant') / 255
             window = torch.from_numpy(np.rollaxis(window, 2)).clone()
             assert (window.size()) == torch.rand(3, 24, 24).size()
@@ -183,12 +178,12 @@ class BetterDetector():
             # print(output)
             val, pred = torch.max(output, dim=1)
             if float(pred.data[0]):
-                result.append([minx, maxx, miny, maxy, val.data[0]])
-
-        print('24 removed {} out of {} boxes'.format(len(bbox_from_12) - len(result), len(bbox_from_12)))
+                result.append([xmin, ymin, xmax, ymax, val.data[0]])
+        after_24 = len(result)
         # run global NMS
         if len(result):
             result = py_cpu_nms(np.array(result), self.nms_threshold)
+        print(' 12-nms-{}, 24-{}, nms-{}'.format(len(bbox_from_12), after_24, len(result)))
 
         return result
 

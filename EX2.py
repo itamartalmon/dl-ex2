@@ -15,7 +15,7 @@ from input_handler import AFLW, get_positive_train_and_test_sets, get_negative_s
     PATH_TO_FDDB_IMAGES
 from models import Det12, FCN12, SimpleDetector, Det24, BetterDetector
 from negative_mining import create_negative_examples
-from plot_utils import plot_learning_curves
+from plot_utils import plot_learning_curves, box2ellipsePIL, box2ellipse
 
 
 def train_model(model, criterion, optimizer, dset_loaders, dset_sizes, num_epochs=25):
@@ -124,10 +124,10 @@ def Q2(reload=True, output_detected_images=False):
     else:
         model = FCN12()
         net_size = 12
-        num_of_epochs = 500
+        num_of_epochs = 100
         batch_size = 128
         criterion = nn.CrossEntropyLoss()
-        optimizer = optim.Adam(model.parameters(), lr=5e-3)
+        optimizer = optim.Adam(model.parameters(), lr=5e-4)
         pre_load = time.time()
 
         print('Getting AFLW data...')
@@ -164,7 +164,7 @@ def Q2(reload=True, output_detected_images=False):
     img_list = get_fddb_image_paths()
     n = len(img_list)
 
-    with open("fold-01-out.txt", 'w', newline='\n') as f:
+    with open("fold-01-out-12.txt", 'w', newline='\n') as f:
         for idx, img in enumerate(img_list):
 
             sys.stdout.write("\rProcessing image number {0}/{1} : {2}".format(idx + 1, n, img))
@@ -183,15 +183,16 @@ def Q2(reload=True, output_detected_images=False):
                     os.mkdir('outputs')
                 i = Image.open(path)
                 for box in res:
-                    ImageDraw.Draw(i).rectangle(box[0:4], outline="red")
+                    ellipse = box2ellipsePIL(box[0:4], i.height, i.width)
+                    ImageDraw.Draw(i).ellipse(ellipse, outline="red")
                 i.save(os.sep.join(["outputs", path.split(os.sep)[-1]]))
                 i.close()
 
             f.write(img + '\n')
             f.write(str(len(res)) + '\n')
-            for r in res:
-                s = ' '.join([str(x) for x in r])
-                f.write(s + '\n')
+            for box in res:
+                ellipse = box2ellipse(box, i.height, i.width)
+                f.write(ellipse + '\n')
     return best_model
 
 
@@ -204,7 +205,7 @@ def Q3():
     batch_size = 128
     num_of_epochs = 100
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.parameters(), lr=5e-3)
+    optimizer = optim.Adam(model.parameters(), lr=5e-4)
     pre_load = time.time()
 
     print('Getting AFLW data...')
@@ -215,7 +216,7 @@ def Q3():
         negative_sampled = torch.load('mined_negative_samples_for_24.t7')
     else:
         m = torch.load('FCN12.t7')
-        d = SimpleDetector(m, scale_list=[0.2, 0.1, 0.05], nms_threshold=0.7)
+        d = SimpleDetector(m, scale_list=[0.1, 0.07, 0.05, 0.04, 0.03, 0.02, 0.01, 0.005], nms_threshold=0.7)
         negative_sampled = create_negative_examples(d, num_of_samples=len(dataset) + len(testDataset))
         torch.save(negative_sampled, 'mined_negative_samples_for_24.t7')
         print(negative_sampled.size())
@@ -241,19 +242,18 @@ def Q4(reload=True, output_detected_images=False):
         m12 = torch.load("FCN12.t7")
     else:
         m12 = Q2(output_detected_images=True)
-    simple_d = SimpleDetector(m12, nms_threshold=0.8)
 
     if os.path.isfile("Det24.t7") and reload:
         m24 = torch.load("Det24.t7")
     else:
         m24 = Q3()
 
-    d = BetterDetector(m24, simple_d, nms_threshold=0.8)
+    d = BetterDetector(m24, m12, scale_list=[0.1, 0.07, 0.05, 0.04, 0.03, 0.02, 0.01, 0.005], nms_threshold=0.7)
 
     img_list = get_fddb_image_paths()
     n = len(img_list)
 
-    with open("fold-01-out-24.txt", 'w', newline='\n') as f:
+    with open("fold-01-out.txt", 'w', newline='\n') as f:
         for idx, img in enumerate(img_list):
 
             sys.stdout.write("\rProcessing image number {0}/{1} : {2}".format(idx + 1, n, img))
@@ -272,15 +272,16 @@ def Q4(reload=True, output_detected_images=False):
                     os.mkdir('outputs24')
                 i = Image.open(path)
                 for box in res:
-                    ImageDraw.Draw(i).rectangle((box[0], box[1], box[0] + box[2], box[1] + box[3]), outline="red")
+                    ellipse = box2ellipsePIL(box[0:4], i.height, i.width)
+                    ImageDraw.Draw(i).ellipse(ellipse, outline="red")
                 i.save(os.sep.join(["outputs24", path.split(os.sep)[-1]]))
                 i.close()
 
             f.write(img + '\n')
             f.write(str(len(res)) + '\n')
-            for r in res:
-                s = ' '.join([str(x) for x in r])
-                f.write(s + '\n')
+            for box in res:
+                ellipse = box2ellipse(box, i.height, i.width)
+                f.write(ellipse + '\n')
 
 
 # Q1()
