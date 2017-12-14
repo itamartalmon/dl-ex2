@@ -98,7 +98,7 @@ def Q1():
     batch_size = 128
     num_of_epochs = 100
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.parameters(), lr=5e-3)
+    optimizer = optim.Adam(model.parameters(), lr=5e-4)
     pre_load = time.time()
     print('Getting AFLW data...')
     dataset, testDataset = get_positive_train_and_test_sets(net_size, train_frac=0.8)
@@ -284,10 +284,10 @@ def Q4(reload=True, output_detected_images=False):
                 f.write(ellipse + '\n')
 
 
-# Q1()
+Q1()
 
 # Q2(reload=True, output_detected_images=True)
 
 # Q3()
 
-Q4(output_detected_images=True)
+# Q4(output_detected_images=True)
