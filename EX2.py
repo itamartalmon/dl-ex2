@@ -160,7 +160,7 @@ def Q2(reload=True, output_detected_images=False):
         plot_learning_curves(losses['train'], losses['val'], 'FCN12Net')
 
     # run detector and output results
-    d = SimpleDetector(best_model, nms_threshold=0.8)
+    d = SimpleDetector(best_model, nms_threshold=0.6)
     img_list = get_fddb_image_paths()
     n = len(img_list)
 

@@ -37,9 +37,9 @@ class Det12(nn.Module):
 class FCN12(nn.Module):
     def __init__(self):
         super(FCN12, self).__init__()
-        self.conv = nn.Conv2d(in_channels=3, out_channels=16, kernel_size=3, stride=1)
-        self.conv2 = nn.Conv2d(in_channels=16, out_channels=16, kernel_size=4, stride=1)
-        self.conv3 = nn.Conv2d(in_channels=16, out_channels=2, kernel_size=1, stride=1)
+        self.conv = nn.Conv2d(in_channels=3, out_channels=16, kernel_size=3)
+        self.conv2 = nn.Conv2d(in_channels=16, out_channels=16, kernel_size=5)
+        self.conv3 = nn.Conv2d(in_channels=16, out_channels=2, kernel_size=1)
 
     def forward(self, x):
         '''
@@ -51,7 +51,7 @@ class FCN12(nn.Module):
             The probabilities of the face detection or the last FC layer outputs (depends on the input arg)
         '''
         x = self.conv(x)
-        x = F.relu(F.max_pool2d(x, kernel_size=3, stride=2))
+        x = F.relu(F.max_pool2d(x, kernel_size=3, stride=2, padding=1))
         # this will be used in the Det24 Net
         x = F.relu(self.conv2(x))
         x = self.conv3(x)
@@ -63,7 +63,7 @@ class SimpleDetector():
     '''
     Simple detector with 12FCN net
     '''
-    def __init__(self, net, scale_list=[0.5, 0.2, 0.1, 0.07, 0.05, 0.04, 0.03, 0.02, 0.01], nms_threshold=0.8):
+    def __init__(self, net, scale_list=[0.6, 0.5, 0,4, 0.3, 0.2, 0.1, 0.09, 0.08, 0.07, 0.06, 0.05], nms_threshold=0.8):
         self.net = net
         self.scale_list = scale_list
         self.nms_threshold = nms_threshold
@@ -118,8 +118,8 @@ class SimpleDetector():
 class Det24(nn.Module):
     def __init__(self):
         super(Det24, self).__init__()
-        self.conv = nn.Conv2d(in_channels=3, out_channels=64, kernel_size=5, stride=1)
-        self.fc = nn.Linear(in_features=64 * 9 * 9, out_features=128)
+        self.conv = nn.Conv2d(in_channels=3, out_channels=64, kernel_size=5)
+        self.fc = nn.Linear(in_features=64 * 10 * 10, out_features=128)
         self.fc1 = nn.Linear(in_features=128, out_features=2)
 
     def forward(self, x):
@@ -133,9 +133,9 @@ class Det24(nn.Module):
         '''
         x = x.view(-1, 3, 24, 24)
         x = self.conv(x)
-        x = F.relu(F.max_pool2d(x, kernel_size=3, stride=2))
-        x = x.view(-1, 64 * 9 * 9)
-        x = F.relu(self.fc(x))
+        x = F.relu(F.max_pool2d(x, kernel_size=3, stride=2, padding=1), inplace=True)
+        x = x.view(-1, 64 * 10 * 10)
+        x = F.relu(self.fc(x), inplace=True)
         x = self.fc1(x)
         x = F.softmax(x)
         return x

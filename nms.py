@@ -1,53 +1,36 @@
-# --------------------------------------------------------
-# Fast R-CNN
-# Copyright (c) 2015 Microsoft
-# Licensed under The MIT License [see LICENSE for details]
-# Written by Ross Girshick
-# --------------------------------------------------------
-
 import numpy as np
 
 
 def py_cpu_nms(dets, thresh):
-    """Pure Python NMS baseline."""
+    if len(dets) == 0:
+        return dets
+
+    pick = []
+
     x1 = dets[:, 0]
     y1 = dets[:, 1]
     x2 = dets[:, 2]
     y2 = dets[:, 3]
     scores = dets[:, 4]
 
-    areas = (x2 - x1 + 1) * (y2 - y1 + 1)
-    order = scores.argsort()[::-1]
+    area = (x2 - x1) * (y2 - y1)
+    idxs = np.argsort(scores)
 
-    keep = []
-    while order.size > 0:
-        i = order[0]
-        keep.append(i)
-        xx1 = np.maximum(x1[i], x1[order[1:]])
-        yy1 = np.maximum(y1[i], y1[order[1:]])
-        xx2 = np.minimum(x2[i], x2[order[1:]])
-        yy2 = np.minimum(y2[i], y2[order[1:]])
+    while len(idxs) > 0:
+        i = idxs[-1]
+        pick.append(i)
 
-        w = np.maximum(0.0, xx2 - xx1 + 1)
-        h = np.maximum(0.0, yy2 - yy1 + 1)
-        inter = w * h
-        ovr = inter / (areas[i] + areas[order[1:]] - inter)
+        xx1 = np.maximum(x1[i], x1[idxs[:-1]])
+        yy1 = np.maximum(y1[i], y1[idxs[:-1]])
+        xx2 = np.minimum(x2[i], x2[idxs[:-1]])
+        yy2 = np.minimum(y2[i], y2[idxs[:-1]])
 
-        inds = np.where(ovr <= thresh)[0]
-        order = order[inds + 1]
+        w = np.maximum(0, xx2 - xx1)
+        h = np.maximum(0, yy2 - yy1)
 
-    results = []
-    for i in keep:
-        box = dets[i]
-        # left_x top_y width height detection_score
-        left_x = box[0]
-        top_y = box[1]
-        width = box[2]
-        height = box[3]
-        detection_score = box[4]
-        # twiks suggested in HW paper
-        # top_y -= int(0.2 * height)
-        # height += int(0.2 * height)
-        results.append([left_x, top_y, width, height, detection_score])
+        overlap = (w * h) / area[idxs[:-1]]
 
-    return results
+        idxs = np.delete(idxs, np.concatenate(([len(idxs) - 1],
+                                               np.where(overlap > thresh)[0])))
+
+    return np.ndarray.tolist(dets[pick])
