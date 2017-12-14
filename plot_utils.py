@@ -11,7 +11,7 @@ def plot_learning_curves(train_losses, test_losses, name):
     ax.plot(test_losses, label='{} ({})'.format(name, 'test'), linestyle='--', linewidth=3)
 
 
-    ax.set_xticks([])
+    # ax.set_xticks([])
 
     ax.legend()
     ax.grid()

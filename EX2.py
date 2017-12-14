@@ -96,16 +96,16 @@ def Q1():
     model = Det12()
     net_size = 12
     batch_size = 128
-    num_of_epochs = 50
+    num_of_epochs = 100
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=5e-3)
     pre_load = time.time()
     print('Getting AFLW data...')
     dataset, testDataset = get_positive_train_and_test_sets(net_size, train_frac=0.8)
     print('Creating the Data Loaders...')
-    trainloader = DataLoader(AFLW(net_size, dataset, get_negative_samples(net_size, len(dataset))), batch_size,
+    trainloader = DataLoader(AFLW(net_size, dataset, get_negative_samples(len(dataset), net_size)), batch_size,
                              shuffle=True)
-    testloader = DataLoader(AFLW(net_size, testDataset, get_negative_samples(net_size, len(testDataset))), batch_size,
+    testloader = DataLoader(AFLW(net_size, testDataset, get_negative_samples(len(testDataset), net_size)), batch_size,
                             shuffle=True)
     dset_loaders = {'train': trainloader, 'val': testloader}
     dset_sizes = {'train': len(trainloader.dataset), 'val': len(testloader.dataset)}
