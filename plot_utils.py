@@ -31,11 +31,11 @@ def box2ellipsePIL(box, height, width):
 
 
 def box2ellipse(box, height, width):
-    xmin, ymin, xmax, ymax = box2ellipsePIL(box, height, width)
-    major_axis_radius = (xmax - xmin) / 2
-    minor_axis_radius = (ymax - ymin) / 2
-    angle = 0
-    center_x = xmin + major_axis_radius
-    center_y = ymin + minor_axis_radius
+    xmin, ymin, xmax, ymax = box[0], box[1], box[2], box[3]
+    major_axis_radius = (xmax - xmin) * 0.5
+    minor_axis_radius = (ymax - ymin) * 0.5 * 1.2
+    angle = 0.0
+    center_x = (xmin + xmax) * 0.5
+    center_y = (ymin + ymax) * 0.5 - minor_axis_radius * 0.2
     detection_score = box[4]
     return '{} {} {} {} {} {}'.format(major_axis_radius, minor_axis_radius, angle, center_x, center_y, detection_score)

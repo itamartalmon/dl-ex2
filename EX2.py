@@ -248,7 +248,7 @@ def Q4(reload=True, output_detected_images=False):
     else:
         m24 = Q3()
 
-    d = BetterDetector(m24, m12, scale_list=[0.1, 0.07, 0.05, 0.04, 0.03, 0.02, 0.01, 0.005], nms_threshold=0.7)
+    d = BetterDetector(m24, m12, scale_list=[0.2, 0.19, 0.18, 0.17, 0.16, 0.15, 0.14, 0.13, 0.12, 0.11, 0.1, 0.09, 0.08, 0.07, 0.06], nms_threshold=0.7)
 
     img_list = get_fddb_image_paths()
     n = len(img_list)
@@ -284,10 +284,10 @@ def Q4(reload=True, output_detected_images=False):
                 f.write(ellipse + '\n')
 
 
-Q1()
+# Q1()
 
 # Q2(reload=True, output_detected_images=True)
 
 # Q3()
 
-# Q4(output_detected_images=True)
+Q4(output_detected_images=True)
